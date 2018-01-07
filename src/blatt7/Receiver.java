@@ -39,6 +39,9 @@ public class Receiver {
 		
 	}
 	
-	
+	private String getSeq(Packet p) {
+		//extract Seq Number 
+		return null;
+	}
 
 }
