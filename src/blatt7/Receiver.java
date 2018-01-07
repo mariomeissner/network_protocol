@@ -1,6 +1,5 @@
 package blatt7;
 
-import blatt7.Sender.State;
 
 public class Receiver {
 	
@@ -39,6 +38,7 @@ public class Receiver {
 	public void wait(int seq) {
 		
 	}
+	
 	
 
 }
