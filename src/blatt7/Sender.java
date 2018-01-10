@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -28,87 +29,103 @@ public class Sender {
 	private BufferedReader reader;
 	private byte[] fileBytes;
 	private int bytePos = 0;
-	
+	private State currentState;
+	private Transition[][] transition;
+	private DatagramSocket socket;
 	enum State {
 		WAIT_SEND_0, WAIT_ACK_0, WAIT_SEND_1, WAIT_ACK_1;
 	};
 
 	enum Condition {
-
-
+		LOCAL_SEQ_0, LOCAL_SEQ_1, ACK_0, ACK_1
 	};
 
-	private State currentState;
-	private Transition[][] transition;
-
 	public Sender() throws SocketException, UnknownHostException {
-		DatagramSocket serverSocket = new DatagramSocket(PORT);
+		socket = new DatagramSocket(PORT);
 		remoteIP = Inet4Address.getByName(IP);
+		transition = new Transition[State.values().length]
+				[Condition.values().length];
+		transition[State.WAIT_ACK_0.ordinal()]
+				[Condition.ACK_0.ordinal()] = new SendPacketOne();
+		transition[State.WAIT_ACK_1.ordinal()]
+				[Condition.ACK_1.ordinal()] = new SendPacketZero();
+		transition[State.WAIT_SEND_0.ordinal()]
+				[Condition.LOCAL_SEQ_0.ordinal()] = new ReadAckZero();
+		transition[State.WAIT_SEND_1.ordinal()]
+				[Condition.LOCAL_SEQ_1.ordinal()] = new ReadAckOne();
+		
 	}
 
 	public static void main(String[] args) {
 
-		Sender sender;
-		try {
-			sender = new Sender();
-			while(true) {
-
-				sender.waitSend(0);
-				sender.waitAck(0);
-				sender.waitSend(1);
-				sender.waitAck(1);
-			}
-
-		} catch (SocketException | UnknownHostException e) {System.out.println("Something went wrong.");}
 	}
 
 	abstract class Transition {
-		abstract public State execute();
+		abstract public State execute(Packet packet) throws IOException;
 	}
 
 	class SendPacketZero extends Transition {
 		@Override
-		public State execute() {
-
+		public State execute(Packet packet) throws IOException {
+			sendPacket(packet);
 			return State.WAIT_ACK_0;
 		}
 	}
 
 	class SendPacketOne extends Transition {
 		@Override
-		public State execute() {
-
+		public State execute(Packet packet) throws IOException {
+			sendPacket(packet);
 			return State.WAIT_ACK_1;
 		}
 	}
 
-	class ReadAck0 extends Transition {
+	class ReadAckZero extends Transition {
 		@Override
-		public State execute() {
-
+		public State execute(Packet packet) throws IOException {
 			return State.WAIT_SEND_1;
 		}
 	}
 
-	class ReadAck1 extends Transition {
+	class ReadAckOne extends Transition {
 		@Override
-		public State execute() {
-
+		public State execute(Packet packet) throws IOException {
 			return State.WAIT_SEND_0;
 		}
 	}
-
-	public void waitSend(int seq) {
-		if (seq < 0 || seq > 1) throw new IndexOutOfBoundsException();
-		String data = getData();
-		Packet packet = new Packet(seq, 0, data, false);
-		sendPacket(packet);
+	
+	/**
+	 * Processes a condition and returns if the status changed or not.
+	 * @param packet that will be used to evaluate the condition
+	 * @return status changed
+	 * @throws IOException 
+	 */
+	private boolean processCondition(Packet packet) throws IOException {
+		Condition cond = getCondition(packet);
+		Transition trans = transition[currentState.ordinal()]
+				[cond.ordinal()];
+		if(trans != null) {
+			currentState = trans.execute(packet);
+			return true;
+		} else {
+			return false;
+		}
 	}
-
-	public void waitAck(int seq) {
-		if (seq < 0 || seq > 1) throw new IndexOutOfBoundsException();
-		Packet packet = getRemoteAck();
-		while(packet.isAck)...
+	
+	private Condition getCondition(Packet packet) {
+		if (packet.isAck()) {
+			if (packet.getAck() == 0) {
+				return Condition.ACK_0;
+			} else {
+				return Condition.ACK_1;
+			}
+		} else {
+			if (packet.getSeq() == 0) {
+				return Condition.LOCAL_SEQ_0;
+			} else {
+				return Condition.LOCAL_SEQ_1;
+			}
+		}
 	}
 
 	private String getData() {
@@ -120,12 +137,18 @@ public class Sender {
 		return data;
 	}
 
-	private Packet getRemoteAck() {
+	private Packet getRemotePacket() throws IOException {
 		// socket read packet
+		byte[] buffer = new byte[1024];
+		DatagramPacket packet = new DatagramPacket(buffer, buffer.length); 
+		socket.receive(packet);
+		return new Packet(packet.getData());
 	}
 
-	private void sendPacket(Packet packet) {
+	private void sendPacket(Packet packet) throws IOException {
 		// socket send packet
+		socket.send(new DatagramPacket(packet.getBytes(), packet.length()));
+		
 	}
 	
 	private void loadFileBytes() throws IOException {
@@ -137,7 +160,8 @@ public class Sender {
 	}
 	
 	private byte[] readChunk() {
-		byte[] chunk = fileBytes[bytePos, bytesPos + CHUNKSIZE];
+		//byte[] chunk = fileBytes[bytePos, bytesPos + CHUNKSIZE];
+		return null;
 	}
 	
 	private void openFile(String filename) throws FileNotFoundException {

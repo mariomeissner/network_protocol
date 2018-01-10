@@ -7,21 +7,27 @@ public class Packet {
 	private long checksum;
 	private boolean isAck;
 	private String data;
+	private byte[] bytes;
 	
 	public Packet(int seq, int ack, String data, boolean isAck) {
 		this.seq = seq;
 		this.ack = ack;
 		this.data = data;
+		this.bytes = null; //TODO: Create the byte array
 		//TODO: make checksum
 	}
 	
-	public Packet(Byte[] bytes) {
+	public Packet(byte[] bytes) {
 		//TODO: get info from the bytes
 	}
 	
-	public Byte[] getBytes(){
+	public byte[] getBytes(){
 		//TODO: return the byte array
 		return null;
+	}
+	
+	public int length() {
+		return bytes.length;
 	}
 	
 	public int getSeq() {
