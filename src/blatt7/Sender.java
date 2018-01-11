@@ -22,7 +22,6 @@ public class Sender {
 
 	public static final String IP = "localhost";
 	public static final int PORT = 5001; 
-	public static final String FILE = ".\test.txt";
 	public static final int CHUNKSIZE =  1000; //Kb
 
 	private InetAddress remoteIP; 
@@ -32,6 +31,10 @@ public class Sender {
 	private State currentState;
 	private Transition[][] transition;
 	private DatagramSocket socket;
+	private long timer_start;
+	private int bytesPos = 0;
+	private int numChunks;
+	
 	enum State {
 		WAIT_SEND_0, WAIT_ACK_0, WAIT_SEND_1, WAIT_ACK_1;
 	};
@@ -57,7 +60,15 @@ public class Sender {
 	}
 
 	public static void main(String[] args) {
-
+		
+		try {
+			
+			
+			
+		} catch (IOException e) {}
+		
+		
+		
 	}
 
 	abstract class Transition {
@@ -67,7 +78,7 @@ public class Sender {
 	class SendPacketZero extends Transition {
 		@Override
 		public State execute(Packet packet) throws IOException {
-			sendPacket(packet);
+			socketSendPacket(packet);
 			return State.WAIT_ACK_0;
 		}
 	}
@@ -75,7 +86,7 @@ public class Sender {
 	class SendPacketOne extends Transition {
 		@Override
 		public State execute(Packet packet) throws IOException {
-			sendPacket(packet);
+			socketSendPacket(packet);
 			return State.WAIT_ACK_1;
 		}
 	}
@@ -93,6 +104,21 @@ public class Sender {
 			return State.WAIT_SEND_0;
 		}
 	}
+	
+	public void sendFile(String path) throws IOException {
+		
+		/* Read the file and chunk it up */
+		loadFileBytes("test.txt");
+		
+		/* Send packets in a loop */
+		for (int i = 0; i < numChunks; i++) {
+			sendPacket(packet);
+			getRemotePacket();
+		}
+		/* Finish */
+		
+	}
+	
 	
 	/**
 	 * Processes a condition and returns if the status changed or not.
@@ -128,40 +154,58 @@ public class Sender {
 		}
 	}
 
-	private String getData() {
-		Scanner scanner = new Scanner(System.in);
-		System.out.println("Data of the new packet: ");
-		String data;
-		data = scanner.next();
-		scanner.close();
-		return data;
+	//TODO: Do we need to return the packet?
+	/**
+	 * Reads a new packet and validates it. 
+	 * Will keep reading packets until received packet is a valid condition.
+	 * @return the packet we read
+	 * @throws IOException
+	 */
+	public void getResponse() throws IOException {
+		boolean success = false;
+		while (!success) {
+			byte[] buffer = new byte[1024];
+			DatagramPacket datagram = new DatagramPacket(buffer, buffer.length); 
+			socket.receive(datagram);
+			Packet packet = new Packet(datagram.getData());
+			success = processCondition(packet);
+		}
 	}
 
-	private Packet getRemotePacket() throws IOException {
-		// socket read packet
-		byte[] buffer = new byte[1024];
-		DatagramPacket packet = new DatagramPacket(buffer, buffer.length); 
-		socket.receive(packet);
-		return new Packet(packet.getData());
+	/**
+	 * Creates a new packet, and tries to send it. 
+	 * Will retry until transition is successsful.
+	 * @throws IOException
+	 */
+	public void send() throws IOException {
+		boolean success = false;
+		while(!success) {
+			Packet packet = new Packet(getNextChunk());
+			success = processCondition(packet);
+		}
 	}
-
-	private void sendPacket(Packet packet) throws IOException {
+	
+	private void socketSendPacket(Packet packet) throws IOException {
+		
 		// socket send packet
 		socket.send(new DatagramPacket(packet.getBytes(), packet.length()));
+	}
+	
+	
+	
+	private void loadFileBytes(String path) throws IOException {
+		fileBytes = Files.readAllBytes(Paths.get(path));
+		reader.close();
+		numChunks = (int) Math.ceil(fileBytes.length / CHUNKSIZE);
+	}
 		
-	}
-	
-	private void loadFileBytes() throws IOException {
-		fileBytes = Files.readAllBytes(Paths.get(FILE));
-	}
-	
-	private void closeFile() throws IOException {
-		this.reader.close();
-	}
-	
-	private byte[] readChunk() {
-		//byte[] chunk = fileBytes[bytePos, bytesPos + CHUNKSIZE];
-		return null;
+	private byte[] getNextChunk() {
+		byte[] chunk = new byte[CHUNKSIZE];
+		for (int i = 0; i<CHUNKSIZE; i++) {
+			chunk[i] = fileBytes[i + bytesPos];
+		}
+		bytesPos += CHUNKSIZE;
+		return chunk;
 	}
 	
 	private void openFile(String filename) throws FileNotFoundException {
