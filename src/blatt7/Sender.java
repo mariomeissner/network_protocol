@@ -12,18 +12,20 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
+import java.util.concurrent.TimeoutException;
 
 public class Sender {
 
 	public static final String IP = "localhost";
 	public static final int PORT = 5001; 
 	public static final int CHUNKSIZE =  1000; //Kb
-
+	public static final int TIME_LIMIT = 2000;
 	private InetAddress remoteIP; 
 	private BufferedReader reader;
 	private byte[] fileBytes;
@@ -34,20 +36,24 @@ public class Sender {
 	private long timer_start;
 	private int bytesPos = 0;
 	private int numChunks;
+	private Packet currentPacket;
 	
 	enum State {
 		WAIT_SEND_0, WAIT_ACK_0, WAIT_SEND_1, WAIT_ACK_1;
 	};
 
 	enum Condition {
-		LOCAL_SEQ_0, LOCAL_SEQ_1, ACK_0, ACK_1
+		LOCAL_SEQ_0, LOCAL_SEQ_1, ACK_0, ACK_1, CORRUPT;
 	};
 
 	public Sender() throws SocketException, UnknownHostException {
 		socket = new DatagramSocket(PORT);
+		socket.setSoTimeout(TIME_LIMIT);
 		remoteIP = Inet4Address.getByName(IP);
 		transition = new Transition[State.values().length]
 				[Condition.values().length];
+		
+		/* Conditions that allow the state machine to advance to the next state */
 		transition[State.WAIT_ACK_0.ordinal()]
 				[Condition.ACK_0.ordinal()] = new SendPacketOne();
 		transition[State.WAIT_ACK_1.ordinal()]
@@ -57,68 +63,51 @@ public class Sender {
 		transition[State.WAIT_SEND_1.ordinal()]
 				[Condition.LOCAL_SEQ_1.ordinal()] = new ReadAckOne();
 		
-	}
-
-	public static void main(String[] args) {
-		
-		try {
-			
-			
-			
-		} catch (IOException e) {}
-		
-		
+		/* Conditions that make the state machine repeat its last state */
+		transition[State.WAIT_ACK_0.ordinal()]
+				[Condition.ACK_1.ordinal()] = new SendPacketZero();
+		transition[State.WAIT_ACK_1.ordinal()]
+				[Condition.ACK_0.ordinal()] = new SendPacketOne();
+		transition[State.WAIT_ACK_0.ordinal()]
+				[Condition.CORRUPT.ordinal()] = new SendPacketZero();
+		transition[State.WAIT_ACK_1.ordinal()]
+				[Condition.CORRUPT.ordinal()] = new SendPacketOne();
 		
 	}
 
 	abstract class Transition {
-		abstract public State execute(Packet packet) throws IOException;
+		abstract public State execute() throws IOException;
 	}
 
 	class SendPacketZero extends Transition {
 		@Override
-		public State execute(Packet packet) throws IOException {
-			socketSendPacket(packet);
+		public State execute() throws IOException {
+			socketSendCurrentPacket();
 			return State.WAIT_ACK_0;
 		}
 	}
 
 	class SendPacketOne extends Transition {
 		@Override
-		public State execute(Packet packet) throws IOException {
-			socketSendPacket(packet);
+		public State execute() throws IOException {
+			socketSendCurrentPacket();
 			return State.WAIT_ACK_1;
 		}
 	}
 
 	class ReadAckZero extends Transition {
 		@Override
-		public State execute(Packet packet) throws IOException {
+		public State execute() throws IOException {
 			return State.WAIT_SEND_1;
 		}
 	}
 
 	class ReadAckOne extends Transition {
 		@Override
-		public State execute(Packet packet) throws IOException {
+		public State execute() throws IOException {
 			return State.WAIT_SEND_0;
 		}
 	}
-	
-	public void sendFile(String path) throws IOException {
-		
-		/* Read the file and chunk it up */
-		loadFileBytes("test.txt");
-		
-		/* Send packets in a loop */
-		for (int i = 0; i < numChunks; i++) {
-			sendPacket(packet);
-			getRemotePacket();
-		}
-		/* Finish */
-		
-	}
-	
 	
 	/**
 	 * Processes a condition and returns if the status changed or not.
@@ -126,12 +115,11 @@ public class Sender {
 	 * @return status changed
 	 * @throws IOException 
 	 */
-	private boolean processCondition(Packet packet) throws IOException {
-		Condition cond = getCondition(packet);
+	private boolean processCondition(Condition cond) throws IOException {
 		Transition trans = transition[currentState.ordinal()]
 				[cond.ordinal()];
 		if(trans != null) {
-			currentState = trans.execute(packet);
+			currentState = trans.execute();
 			return true;
 		} else {
 			return false;
@@ -166,9 +154,12 @@ public class Sender {
 		while (!success) {
 			byte[] buffer = new byte[1024];
 			DatagramPacket datagram = new DatagramPacket(buffer, buffer.length); 
-			socket.receive(datagram);
+			try { socket.receive(datagram); } catch (SocketTimeoutException e) {
+				//We do as if the packet was corrupt because we just want to send it again
+				processCondition(Condition.CORRUPT);
+			}
 			Packet packet = new Packet(datagram.getData());
-			success = processCondition(packet);
+			success = processCondition(getCondition(packet));
 		}
 	}
 
@@ -181,14 +172,14 @@ public class Sender {
 		boolean success = false;
 		while(!success) {
 			Packet packet = new Packet(getNextChunk());
-			success = processCondition(packet);
+			success = processCondition(Condition.CORRUPT);
 		}
 	}
 	
-	private void socketSendPacket(Packet packet) throws IOException {
+	private void socketSendCurrentPacket() throws IOException {
 		
 		// socket send packet
-		socket.send(new DatagramPacket(packet.getBytes(), packet.length()));
+		socket.send(new DatagramPacket(currentPacket.getBytes(), currentPacket.length()));
 	}
 	
 	
@@ -207,11 +198,4 @@ public class Sender {
 		bytesPos += CHUNKSIZE;
 		return chunk;
 	}
-	
-	private void openFile(String filename) throws FileNotFoundException {
-		File file = new File(filename);
-		BufferedReader br = new BufferedReader(new FileReader(file));
-		this.reader = br;
-	}
-
 }
