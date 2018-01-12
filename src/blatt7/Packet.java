@@ -27,8 +27,8 @@ public class Packet {
 	}
 	
 	/**
-	 * Get payload length
-	 * @return the length of the payload in bytes
+	 * Get packet length
+	 * @return the length of the packet in bytes
 	 */
 	public int length() {
 		return payload.length;
