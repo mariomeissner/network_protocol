@@ -13,11 +13,11 @@ public class Packet {
 		this.seq = seq;
 		this.ack = ack;
 		this.payload = payload;
-		this.payload = null; //TODO: Create the byte array
-		//TODO: make checksum
+		this.isAck = isAck;
 	}
 	
 	public Packet(byte[] bytes) {
+	packetBytes = bytes; 
 		//TODO: get info from the bytes
 	}
 	

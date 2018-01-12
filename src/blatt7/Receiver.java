@@ -105,7 +105,10 @@ public class Receiver {
 	}
 	
 	private void sendACK(int i) throws IOException {
-		//send ACK as packet, int either 0 or 1 
+		
+		byte in[] = new byte[0];
+		Packet ack = new Packet(i, i, null, true);
+		//TODO: convert Packet to Datagram 
 		DatagramPacket p = new DatagramPacket(ACK.getBytes(), ACK.length());
 		socket.send(p);
 	}
