@@ -28,7 +28,7 @@ public class Receiver {
 	private State currentState; 
 	private Transition[][] transition;
 	private InetAddress remoteIP;
-	private Packet ACK;
+
 	private Packet packet = null; 
 	
 	
@@ -109,7 +109,7 @@ public class Receiver {
 		byte in[] = new byte[0];
 		Packet ack = new Packet(i, i, null, true);
 		//TODO: convert Packet to Datagram 
-		DatagramPacket p = new DatagramPacket(ACK.getBytes(), ACK.length());
+		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length());
 		socket.send(p);
 	}
 	
