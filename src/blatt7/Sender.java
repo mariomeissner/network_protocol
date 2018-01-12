@@ -214,7 +214,7 @@ public class Sender {
 	
 	private void setPacket(int seq) {
 		if (seq > 1 || seq < 0) throw new IndexOutOfBoundsException();
-		currentPacket = new Packet(seq, 0, getNextChunk(), false);
+		currentPacket = new Packet(seq, 0, getNextChunk(), 0);
 	}
 	
 	private void loadFileBytes(String path) throws IOException {

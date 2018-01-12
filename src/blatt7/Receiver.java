@@ -116,7 +116,7 @@ public class Receiver {
 	private void sendACK(int i) throws IOException {
 		
 		byte in[] = new byte[0];
-		Packet ack = new Packet(i, i, null, true);
+		Packet ack = new Packet(i, i, null, 1);
 		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length());
 		socket.send(p);
 	}
