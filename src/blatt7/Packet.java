@@ -6,14 +6,14 @@ public class Packet {
 	private int ack;
 	private long checksum;
 	private boolean isAck;
-	private String data;
-	private byte[] bytes;
+	private byte[] payload;
+	private byte[] packetBytes;
 	
-	public Packet(int seq, int ack, String data, boolean isAck) {
+	public Packet(int seq, int ack, byte[] payload, boolean isAck) {
 		this.seq = seq;
 		this.ack = ack;
-		this.data = data;
-		this.bytes = null; //TODO: Create the byte array
+		this.payload = payload;
+		this.payload = null; //TODO: Create the byte array
 		//TODO: make checksum
 	}
 	
@@ -26,8 +26,12 @@ public class Packet {
 		return null;
 	}
 	
+	/**
+	 * Get payload length
+	 * @return the length of the payload in bytes
+	 */
 	public int length() {
-		return bytes.length;
+		return payload.length;
 	}
 	
 	public int getSeq() {
@@ -38,7 +42,8 @@ public class Packet {
 		return ack;
 	}
 	
-	public long getChecksum() {
+	public long checkChecksum() {
+		//TODO: check the checksum
 		return checksum;
 	}
 	

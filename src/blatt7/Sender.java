@@ -29,11 +29,9 @@ public class Sender {
 	private InetAddress remoteIP; 
 	private BufferedReader reader;
 	private byte[] fileBytes;
-	private int bytePos = 0;
 	private State currentState;
 	private Transition[][] transition;
 	private DatagramSocket socket;
-	private long timer_start;
 	private int bytesPos = 0;
 	private int numChunks;
 	private Packet currentPacket;
@@ -46,22 +44,27 @@ public class Sender {
 		LOCAL_SEQ_0, LOCAL_SEQ_1, ACK_0, ACK_1, CORRUPT;
 	};
 
-	public Sender() throws SocketException, UnknownHostException {
-		socket = new DatagramSocket(PORT);
-		socket.setSoTimeout(TIME_LIMIT);
-		remoteIP = Inet4Address.getByName(IP);
+	public Sender() {
+		try {
+			socket = new DatagramSocket(PORT);
+			socket.setSoTimeout(TIME_LIMIT);
+			remoteIP = Inet4Address.getByName(IP);
+		} catch (SocketException | UnknownHostException e) {
+			System.out.println("Connection error!");
+		}
+		
 		transition = new Transition[State.values().length]
 				[Condition.values().length];
 		
 		/* Conditions that allow the state machine to advance to the next state */
 		transition[State.WAIT_ACK_0.ordinal()]
-				[Condition.ACK_0.ordinal()] = new SendPacketOne();
+				[Condition.ACK_0.ordinal()] = new ReadAckZero();
 		transition[State.WAIT_ACK_1.ordinal()]
-				[Condition.ACK_1.ordinal()] = new SendPacketZero();
+				[Condition.ACK_1.ordinal()] = new ReadAckOne();
 		transition[State.WAIT_SEND_0.ordinal()]
-				[Condition.LOCAL_SEQ_0.ordinal()] = new ReadAckZero();
+				[Condition.LOCAL_SEQ_0.ordinal()] = new SendPacketZero();
 		transition[State.WAIT_SEND_1.ordinal()]
-				[Condition.LOCAL_SEQ_1.ordinal()] = new ReadAckOne();
+				[Condition.LOCAL_SEQ_1.ordinal()] = new SendPacketOne();
 		
 		/* Conditions that make the state machine repeat its last state */
 		transition[State.WAIT_ACK_0.ordinal()]
@@ -82,6 +85,7 @@ public class Sender {
 	class SendPacketZero extends Transition {
 		@Override
 		public State execute() throws IOException {
+			setPacket(0);
 			socketSendCurrentPacket();
 			return State.WAIT_ACK_0;
 		}
@@ -90,6 +94,7 @@ public class Sender {
 	class SendPacketOne extends Transition {
 		@Override
 		public State execute() throws IOException {
+			
 			socketSendCurrentPacket();
 			return State.WAIT_ACK_1;
 		}
@@ -98,6 +103,7 @@ public class Sender {
 	class ReadAckZero extends Transition {
 		@Override
 		public State execute() throws IOException {
+			setPacket(1);
 			return State.WAIT_SEND_1;
 		}
 	}
@@ -105,6 +111,7 @@ public class Sender {
 	class ReadAckOne extends Transition {
 		@Override
 		public State execute() throws IOException {
+			setPacket(0);
 			return State.WAIT_SEND_0;
 		}
 	}
@@ -127,6 +134,9 @@ public class Sender {
 	}
 	
 	private Condition getCondition(Packet packet) {
+		if (!packet.checkChecksum()) {
+			return Condition.CORRUPT;
+		}
 		if (packet.isAck()) {
 			if (packet.getAck() == 0) {
 				return Condition.ACK_0;
@@ -142,14 +152,13 @@ public class Sender {
 		}
 	}
 
-	//TODO: Do we need to return the packet?
 	/**
 	 * Reads a new packet and validates it. 
 	 * Will keep reading packets until received packet is a valid condition.
 	 * @return the packet we read
 	 * @throws IOException
 	 */
-	public void getResponse() throws IOException {
+	private void getResponse() throws IOException {
 		boolean success = false;
 		while (!success) {
 			byte[] buffer = new byte[1024];
@@ -168,21 +177,45 @@ public class Sender {
 	 * Will retry until transition is successsful.
 	 * @throws IOException
 	 */
-	public void send() throws IOException {
-		boolean success = false;
-		while(!success) {
-			Packet packet = new Packet(getNextChunk());
-			success = processCondition(Condition.CORRUPT);
+	private void send() throws IOException {
+		if(!processCondition(getCondition(currentPacket))) {
+			System.out.println("currentPacket is not a valid condition, aborting!");
 		}
 	}
 	
-	private void socketSendCurrentPacket() throws IOException {
+	public void startTransmission(String filepath) {
+		currentState = State.WAIT_SEND_0;
+		setPacket(0);
+		try {
+			loadFileBytes(filepath);
+		} catch (IOException e) {
+			System.out.println("Error loading the file");
+			return;
+		}
 		
-		// socket send packet
-		socket.send(new DatagramPacket(currentPacket.getBytes(), currentPacket.length()));
+		try {
+			for (int i = 0; i < numChunks; i++) {
+				send();
+				getResponse();
+			}
+		} catch (IOException e) {
+			System.out.println("Error while sending data!");
+			return;
+		}
+		
+		System.out.println("Finished transmisison");
+		
 	}
 	
+	private void socketSendCurrentPacket() throws IOException {
+		DatagramPacket datagram = new DatagramPacket(currentPacket.getBytes(), currentPacket.length(), remoteIP, PORT);
+		socket.send(datagram);
+	}
 	
+	private void setPacket(int seq) {
+		if (seq > 1 || seq < 0) throw new IndexOutOfBoundsException();
+		currentPacket = new Packet(seq, 0, getNextChunk(), false);
+	}
 	
 	private void loadFileBytes(String path) throws IOException {
 		fileBytes = Files.readAllBytes(Paths.get(path));
