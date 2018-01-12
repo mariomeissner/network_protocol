@@ -42,9 +42,9 @@ public class Packet {
 		return ack;
 	}
 	
-	public long checkChecksum() {
+	public boolean checkChecksum() {
 		//TODO: check the checksum
-		return checksum;
+		return false;
 	}
 	
 	public boolean isAck() {

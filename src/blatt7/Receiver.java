@@ -40,10 +40,15 @@ public class Receiver {
 	}; 
 	
 	
-	public Receiver() throws SocketException, UnknownHostException {
-		socket = new DatagramSocket(PORT);
-		socket.setSoTimeout(TIME_LIMIT);
-		remoteIP = Inet4Address.getByName(IP);
+	public Receiver()  {
+		try {
+			socket = new DatagramSocket(PORT);
+			socket.setSoTimeout(TIME_LIMIT);
+			remoteIP = Inet4Address.getByName(IP);
+		} catch (SocketException | UnknownHostException e) {
+			System.out.println("Connection error!");
+		}
+		
 		transition = new Transition[State.values().length][Condition.values().length];
 		
 		/* Conditions that allow the state machine to advance to the next state */
@@ -62,9 +67,6 @@ public class Receiver {
 		transition[State.WAIT_0.ordinal()]
 				[Condition.CORRUPT.ordinal()] = new SendACK1();
 	}
-	
-	
-	
 	
 	abstract class Transition {
 		abstract public State execute() throws IOException;
@@ -85,7 +87,12 @@ public class Receiver {
 			return State.WAIT_0;
 		}
 	}
-	
+	/**
+	 * Processes a condition and returns if the status changed or not.
+	 * @param packet that will be used to evaluate the condition
+	 * @return status changed
+	 * @throws IOException 
+	 */
 	private boolean processCondition(Condition cond) throws IOException {
 		Transition trans = transition[currentState.ordinal()]
 				[cond.ordinal()];
@@ -97,18 +104,19 @@ public class Receiver {
 		}
 	}
 	private Condition getCondition(Packet packet) {
-			if (packet.getSeq() == 0) {
-				return Condition.SEQ_0;
-			} else {
-				return Condition.SEQ_1;
-			}
+		if(!packet.checkChecksum()){
+			return Condition.CORRUPT;
+		}else if (packet.getSeq() == 0) {
+			return Condition.SEQ_0;
+		} else {
+			return Condition.SEQ_1;
+		}
 	}
 	
 	private void sendACK(int i) throws IOException {
 		
 		byte in[] = new byte[0];
 		Packet ack = new Packet(i, i, null, true);
-		//TODO: convert Packet to Datagram 
 		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length());
 		socket.send(p);
 	}
