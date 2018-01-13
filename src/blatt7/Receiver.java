@@ -22,7 +22,6 @@ public class Receiver {
 	public static final int PORT = 8001;
 	public static final int CHUNKSIZE = 1000; //Kb
 	public static final int TIME_LIMIT = 2000;
-	private BufferedReader reader;
 	private DatagramSocket socket;
 	private byte[] fileBytes;
 	private State currentState; 
@@ -117,7 +116,7 @@ public class Receiver {
 		
 		byte in[] = new byte[0];
 		Packet ack = new Packet(i, i, null, 1);
-		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length());
+		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length(), remoteIP, PORT);
 		socket.send(p);
 	}
 	

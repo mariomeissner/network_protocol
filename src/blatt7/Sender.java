@@ -1,24 +1,16 @@
 package blatt7;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Scanner;
-import java.util.concurrent.TimeoutException;
 
 public class Sender {
 
@@ -26,7 +18,7 @@ public class Sender {
 	public static final int PORT = 5001; 
 	public static final int CHUNKSIZE =  1000; //Kb
 	public static final int TIME_LIMIT = 2000;
-	private InetAddress remoteIP; 
+	private InetAddress remoteIP;
 	private BufferedReader reader;
 	private byte[] fileBytes;
 	private State currentState;
@@ -51,6 +43,7 @@ public class Sender {
 			remoteIP = Inet4Address.getByName(IP);
 		} catch (SocketException | UnknownHostException e) {
 			System.out.println("Connection error!");
+			return;
 		}
 		
 		transition = new Transition[State.values().length]
@@ -85,8 +78,8 @@ public class Sender {
 	class SendPacketZero extends Transition {
 		@Override
 		public State execute() throws IOException {
-			setPacket(0);
 			socketSendCurrentPacket();
+			System.out.println("Transition: SendPacketZero");
 			return State.WAIT_ACK_0;
 		}
 	}
@@ -94,8 +87,8 @@ public class Sender {
 	class SendPacketOne extends Transition {
 		@Override
 		public State execute() throws IOException {
-			
 			socketSendCurrentPacket();
+			System.out.println("Transition: SendPacketOne");
 			return State.WAIT_ACK_1;
 		}
 	}
@@ -104,6 +97,7 @@ public class Sender {
 		@Override
 		public State execute() throws IOException {
 			setPacket(1);
+			System.out.println("Transition: ReadAckZero");
 			return State.WAIT_SEND_1;
 		}
 	}
@@ -112,6 +106,7 @@ public class Sender {
 		@Override
 		public State execute() throws IOException {
 			setPacket(0);
+			System.out.println("Transition: ReadAckOne");
 			return State.WAIT_SEND_0;
 		}
 	}
