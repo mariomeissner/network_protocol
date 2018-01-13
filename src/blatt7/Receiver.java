@@ -27,6 +27,9 @@ public class Receiver {
 	private State currentState; 
 	private Transition[][] transition;
 	private InetAddress remoteIP;
+	private int currentACK = 0; 
+	private int ACK1 = 1; 
+	private int ACK0 = 0; 
 
 	private Packet packet = null; 
 	
@@ -75,6 +78,7 @@ public class Receiver {
 		@Override
 		public State execute() throws IOException{
 			sendACK(0);
+			System.out.println("Transition: Send Ack0");
 			return State.WAIT_1;
 		}
 	}
@@ -83,6 +87,7 @@ public class Receiver {
 		@Override
 		public State execute() throws IOException{
 			sendACK(1);
+			System.out.println("Transition: Send Ack1");
 			return State.WAIT_0;
 		}
 	}
@@ -112,6 +117,11 @@ public class Receiver {
 		}
 	}
 	
+	/**
+	 * Creates a new ACK, and tries to send it. 
+	 * @param int, that shows if it is ACK 1 or 0
+	 * @throws IOException
+	 */
 	private void sendACK(int i) throws IOException {
 		
 		byte in[] = new byte[0];
@@ -128,17 +138,28 @@ public class Receiver {
 			try {
 				socket.receive(p);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.out.println("Error receiving the file");
 			}
 			packet = new Packet(p.getData());
-			File file = new File("C:\\Users\\Melanie\\Desktop\\Packet.txt");
-			try (FileOutputStream fos = new FileOutputStream("myfile.txt", true)) {
-				   fos.write(packet.getBytes());
-				   fos.close();
+/*		if (packet.getSeq() == currentACK) {
+				sendACK(currentACK); 
+			} else {
+*/				if (currentACK == ACK0){
+					currentACK = ACK1;
+					//sendACK(currentACK);
+				}else{
+					currentACK = ACK0;
+					//sendACK(currentACK);
 				}
-			success = processCondition(getCondition(packet));
-		}
+//			}
+				File file = new File("C:\\Users\\Melanie\\Desktop\\Packet.txt");
+				try (FileOutputStream fos = new FileOutputStream("myfile.txt", true)) {
+					   fos.write(packet.getBytes());
+					   fos.close();
+					}
+				success = processCondition(getCondition(packet));
+			}
+		
 		
 	}
 
