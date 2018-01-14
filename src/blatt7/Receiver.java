@@ -20,15 +20,20 @@ import java.io.IOException;
 
 public class Receiver {
 
+	public static void main(String[] args) {
+		Receiver receiver = new Receiver();
+		receiver.startTransmission("./testreceive.txt");
+		
+	}
+	
 	public static final String TARGET = "localhost";
 	public static final int HOME_PORT = 5002;
 	public static final int TARGET_PORT = 5001;
 	private DatagramSocket socket;
-	private ByteBuffer fileBytes;
+	private byte[] fileBytes;
 	private State currentState; 
 	private Transition[][] transition;
-	private InetAddress remoteIP;
-
+	private int bytePos = 0;
 	private Packet packet = null;
 	private InetSocketAddress target_address; 
 
@@ -49,7 +54,7 @@ public class Receiver {
 		} catch (SocketException e) {
 			System.out.println("Connection error!");
 		}
-		fileBytes = ByteBuffer.allocate(Sender.MAX_FILESIZE);
+		fileBytes = new byte[Sender.MAX_FILESIZE];
 		transition = new Transition[State.values().length][Condition.values().length];
 
 		/* Conditions that allow the state machine to advance to the next state */
@@ -156,7 +161,7 @@ public class Receiver {
 				System.out.println("Receiver: Timeout");
 				//Contents will be corrupt so we will resend
 			}
-			packet = new Packet(p.getData());
+			packet = new Packet(p.getData(), p.getLength());
 			success = processCondition(getCondition(packet));
 			
 			/* we dont need this
@@ -173,13 +178,17 @@ public class Receiver {
 			}
 			*/
 		}
-		fileBytes.put(packet.getBytes());
+		byte[] payload = packet.getPayload();
+		for(int i = 0; i < payload.length; i++) {
+			fileBytes[i + bytePos] = payload[i];
+		}
+		bytePos += payload.length;
 	}
 
 	private void writeFile(String filepath) throws FileNotFoundException, IOException {
 		File file = new File(filepath);
 		try (FileOutputStream fos = new FileOutputStream(file, true)) {
-			fos.write(fileBytes.array());
+			fos.write(fileBytes, 0, bytePos);
 			fos.close();
 		}
 	}

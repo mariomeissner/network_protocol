@@ -60,19 +60,19 @@ public class Packet {
 		for (int i = 0; i < 8; i++) {
 			packetBytes[i] = bchecksum[i];
 		}
-		
-		
-
 	}
 
 	/**
 	 * Reconstruct a packet based on the bytes received through a network.
 	 * @param bytes
 	 */
-	public Packet(byte[] bytes) {
+	public Packet(byte[] bytes, int length) {
 		
 		//Assign the bytes
-		packetBytes = bytes;
+		packetBytes = new byte[length];
+		for (int i = 0; i < length; i++) {
+			packetBytes[i] = bytes[i];
+		}
 		
 		//Get the parameters
 		end = getBit(bytes, 4 + 8*8);
@@ -84,7 +84,7 @@ public class Packet {
 			bchecksum[i] = bytes[i];
 		}
 		checksum = bytesToLong(bchecksum);
-		byte[] payload = new byte[bytes.length - HEADERSIZE]; 
+		payload = new byte[length - HEADERSIZE]; 
 		for (int i = 0; i < payload.length; i++) {
 			payload[i] = bytes[i+HEADERSIZE];
 		}

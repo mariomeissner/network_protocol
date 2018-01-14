@@ -17,11 +17,16 @@ import blatt7.Receiver.State;
 import blatt7.Receiver.Transition;
 
 public class Sender {
-
+	
+	public static void main(String[] args) {
+		Sender sender = new Sender();
+		sender.startTransmission("./testsend.txt");
+	}
+	
 	public static final String TARGET = "localhost";
 	public static final int HOME_PORT = 5001;
 	public static final int TARGET_PORT = 5002;
-	public static final int CHUNKSIZE =  100; //Kb
+	public static final int CHUNKSIZE =  20; //Kb
 	public static final int TIME_LIMIT = 2000;
 	public static final int MAXPACKETSIZE = 5000;
 	public static final int MAX_FILESIZE = 10000;
@@ -167,7 +172,7 @@ public class Sender {
 				System.out.println("Sender: Timeout");
 				//Contents will be corrupt so we will resend
 			}
-			Packet packet = new Packet(datagram.getData());
+			Packet packet = new Packet(datagram.getData(), datagram.getLength());
 			success = processCondition(getCondition(packet));
 		}
 	}
