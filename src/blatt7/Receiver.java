@@ -194,7 +194,7 @@ public class Receiver {
 			System.out.println("Receiver: Error writing file");
 		}
 		millis = System.currentTimeMillis() - millis; 
-		goodput = (((double) packet.length())*8) / (double)(millis/1000); //bit/ms
+		goodput = ((double) (bytePos*8 ))/ (double)(millis/1000); //bit/ms
 		System.out.println("Receiver: Finished transmission");
 		System.out.println("Goodput: " + goodput + "bit/s");
 		
