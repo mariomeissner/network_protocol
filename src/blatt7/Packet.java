@@ -1,14 +1,7 @@
 package blatt7;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import java.util.zip.Adler32;
-import javax.xml.bind.DatatypeConverter;
 
 public class Packet {
 

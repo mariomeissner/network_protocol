@@ -1,26 +1,19 @@
 package blatt7;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
-import blatt7.Receiver.State;
-import blatt7.Receiver.Transition;
 
 public class Sender {
 	
 	public static void main(String[] args) {
 		Sender sender = new Sender();
-		sender.startTransmission("./java.jpg");
+		sender.startTransmission("./pic.jpg");
 	}
 	
 	public static final String TARGET = "217.255.167.49";
@@ -215,7 +208,8 @@ public class Sender {
 	}
 	
 	private void socketSendCurrentPacket() throws IOException {
-		Packet candidate = unreliable(currentPacket);
+		//Packet candidate = unreliable(currentPacket);
+		Packet candidate = currentPacket;
 		if (candidate == null) return; //lost paacket
 		DatagramPacket datagram = new DatagramPacket(candidate.getBytes(), candidate.length());
 		datagram.setSocketAddress(target_address);
