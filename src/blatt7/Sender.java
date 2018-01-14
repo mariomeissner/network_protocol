@@ -20,16 +20,16 @@ public class Sender {
 	
 	public static void main(String[] args) {
 		Sender sender = new Sender();
-		sender.startTransmission("./testsend.txt");
+		sender.startTransmission("./works.jpg");
 	}
 	
-	public static final String TARGET = "localhost";
+	public static final String TARGET = "217.255.167.49";
 	public static final int HOME_PORT = 5001;
 	public static final int TARGET_PORT = 5002;
 	public static final int CHUNKSIZE =  20; //Kb
 	public static final int TIME_LIMIT = 2000;
 	public static final int MAXPACKETSIZE = 5000;
-	public static final int MAX_FILESIZE = 10000;
+	public static final int MAX_FILESIZE = 50000;
 	private InetSocketAddress target_address;
 	private byte[] fileBytes;
 	private State currentState;

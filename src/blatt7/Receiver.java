@@ -1,32 +1,25 @@
 package blatt7;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-
 import blatt7.Packet;
-import java.io.IOException;
 
 public class Receiver {
 
 	public static void main(String[] args) {
 		Receiver receiver = new Receiver();
-		receiver.startTransmission("./testreceive.txt");
+		receiver.startTransmission("./pic.jpg");
 		
 	}
 	
-	public static final String TARGET = "localhost";
+	public static final String TARGET = "217.255.167.49";
 	public static final int HOME_PORT = 5002;
 	public static final int TARGET_PORT = 5001;
 	private DatagramSocket socket;
@@ -105,6 +98,8 @@ public class Receiver {
 	class End extends Transition {
 		@Override
 		public State execute() throws IOException{
+			sendACK(0);
+			sendACK(1);
 			return State.FINISHED;
 		}
 	}
