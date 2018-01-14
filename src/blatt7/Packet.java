@@ -19,18 +19,25 @@ public class Packet {
 	private int isAck;
 	private byte[] payload;
 	private byte[] packetBytes;
-	//TODO: Add the payload length byte in the constructors
+	//TODO: Add the payload length in the constructors
 	private short payloadLength;
-	
+
+	/**
+	 * Construct a packet based on the indicated parameters
+	 * @param seq
+	 * @param ack
+	 * @param payload
+	 * @param isAck
+	 */
 	public Packet(int seq, int ack, byte[] payload, int isAck) {
 		this.seq = seq;
 		this.ack = ack;
 		this.payload = payload;
 		this.isAck = isAck;
-		
+
 		//Create the header
 		Byte header = Byte.parseByte(seq + ack + isAck + "00000", 2);
-		
+
 		//Create the checksum over the pseudopacket (excluding the checksum field
 		Adler32 adler = new Adler32();
 		ByteBuffer checksumContent = ByteBuffer.allocate(payload.length + 2);
@@ -39,7 +46,7 @@ public class Packet {
 		checksumContent.put(payload);
 		adler.update(checksumContent);
 		checksum = adler.getValue();
-		
+
 		//Create the packet bytes
 		ByteBuffer buffer = ByteBuffer.allocate(payload.length + 11);
 		buffer.put(header);
@@ -47,10 +54,14 @@ public class Packet {
 		buffer.putLong(checksum);
 		buffer.put(payload);
 		packetBytes = buffer.array();
-		
-		
+
+
 	}
 
+	/**
+	 * Reconstruct a packet based on the bytes received through a network.
+	 * @param bytes
+	 */
 	public Packet(byte[] bytes) {
 		try {
 			String b = new String(bytes, "UTF-8");
@@ -59,12 +70,14 @@ public class Packet {
 		ack = getBit(bytes, 1);
 		isAck = getBit(bytes, 2);
 		Adler32 adler = new Adler32();
-		for (int i = 0; i < 8; i++) {
-			//Checksum starts at 1 and is 8 bytes long
-			adler.update(packetBytes, 1, 8);
-		}
+		//Checksum starts at 3 and is 8 bytes long
+		adler.update(packetBytes, 3, 8);
 		checksum = adler.getValue();
-		
+		byte[] payload = new byte[bytes.length - 11]; 
+		for (int i = 0; i < payload.length; i++) {
+			payload[i] = bytes[i+11];
+		}
+
 	}
 
 
@@ -101,7 +114,7 @@ public class Packet {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Taken from http://www.herongyang.com/Java/Bit-String-Get-Bit-from-Byte-Array.html
 	 * @param data
@@ -115,25 +128,25 @@ public class Packet {
 		int valInt = valByte>>(8-(posBit+1)) & 0x0001;
 		return valInt;
 	}
-	
-	
-	
-	
+
+
+
+
 	/**
 	 * Taken from https://stackoverflow.com/questions/4485128/how-do-i-convert-long-to-byte-and-back-in-java
 	 * @param x
 	 * @return
 	 */
 	private byte[] longToBytes(long x) {
-	    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-	    buffer.putLong(x);
-	    return buffer.array();
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.putLong(x);
+		return buffer.array();
 	}
 	public long bytesToLong(byte[] bytes) {
-	    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-	    buffer.put(bytes);
-	    buffer.flip();
-	    return buffer.getLong();
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.put(bytes);
+		buffer.flip();
+		return buffer.getLong();
 	}
 
 }
