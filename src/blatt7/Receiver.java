@@ -36,6 +36,7 @@ public class Receiver {
 	private int bytePos = 0;
 	private Packet packet = null;
 	private InetSocketAddress target_address; 
+	private long millis = 0; 
 
 
 	enum State {
@@ -182,6 +183,7 @@ public class Receiver {
 	
 	public void startTransmission(String filepath){
 		currentState = State.WAIT_0;
+		millis = System.currentTimeMillis();
 		try {
 			while(!currentState.equals(State.FINISHED)) {
 				receivePacket();
@@ -190,7 +192,9 @@ public class Receiver {
 		try {writeFile(filepath);} catch (IOException e) {
 			System.out.println("Receiver: Error writing file");
 		}
+		millis = System.currentTimeMillis() - millis; 
 		System.out.println("Receiver: Finished transmission");
+		System.out.println("Duration: " + millis + "Milliseconds");
 
 	}
 
