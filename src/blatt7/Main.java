@@ -10,7 +10,8 @@ public class Main {
 		sender.startTransmission("./testsend.txt");
 		receiver.startTransmission("./testreceive.txt");
 		
-	}
+		
+	} 
 	
 	
 	

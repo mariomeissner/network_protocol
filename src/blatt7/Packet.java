@@ -18,6 +18,7 @@ public class Packet {
 	 */
 	private int seq;
 	private int ack;
+	private int end;
 	private long checksum; 	//32 characters, 16 bytes
 	private int isAck;		// 0 false, 1 true
 	private byte[] payload;
@@ -30,16 +31,20 @@ public class Packet {
 	 * @param payload
 	 * @param isAck
 	 */
-	public Packet(int seq, int ack, byte[] payload, int isAck) {
+	public Packet(int seq, int ack, byte[] payload, int isAck, int end) {
 		this.seq = seq;
 		this.ack = ack;
 		this.payload = payload;
 		this.isAck = isAck;
+		this.end = end;
 		packetBytes = new byte[payload.length + HEADERSIZE];
+		
 		//Create the header bits
-		byte headerbits = (byte) (seq*4 + ack*2 + isAck); 
+		byte headerbits = (byte) (end*8 + seq*4 + ack*2 + isAck); 
+		
 		//Write header bits
 		packetBytes[8] = headerbits;
+		
 		//Write payload
 		for (int i = 0; i < payload.length; i++ ) {
 			packetBytes[i + HEADERSIZE] = payload[i];
@@ -50,10 +55,12 @@ public class Packet {
 		adler.update(packetBytes, 8, packetBytes.length - 8);
 		checksum = adler.getValue();
 		byte[] bchecksum = longToBytes(checksum);
+		
+		//Write checksum
 		for (int i = 0; i < 8; i++) {
 			packetBytes[i] = bchecksum[i];
 		}
-		//Write checksum
+		
 		
 
 	}
@@ -68,6 +75,7 @@ public class Packet {
 		packetBytes = bytes;
 		
 		//Get the parameters
+		end = getBit(bytes, 4 + 8*8);
 		seq = getBit(bytes, 5 + 8*8);
 		ack = getBit(bytes, 6 + 8*8);
 		isAck = getBit(bytes, 7 + 8*8);
@@ -106,6 +114,10 @@ public class Packet {
 	public int getAck() {
 		return ack;
 	}
+	
+	public boolean isEnd() {
+		return end == 1;
+	}
 
 	public boolean checkChecksum() {
 		Adler32 adler = new Adler32();
@@ -114,11 +126,7 @@ public class Packet {
 	}
 
 	public boolean isAck() {
-		if(isAck == 0){
-			return false;
-		}else{
-			return true;
-		}
+		return isAck == 1;
 	}
 
 	/**
