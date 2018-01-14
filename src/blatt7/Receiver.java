@@ -130,7 +130,7 @@ public class Receiver {
 		socket.send(p);
 	}
 	
-	private void receivePacket() throws IOException {
+	private void receivePacket(String filepath) throws IOException {
 		byte buffer[] = new byte[1024];
 		boolean success = false; 
 		while(!success) {
@@ -141,18 +141,18 @@ public class Receiver {
 				System.out.println("Error receiving the file");
 			}
 			packet = new Packet(p.getData());
-/*		if (packet.getSeq() == currentACK) {
+		if (packet.getSeq() == currentACK) {
 				sendACK(currentACK); 
 			} else {
-*/				if (currentACK == ACK0){
+				if (currentACK == ACK0){
 					currentACK = ACK1;
-					//sendACK(currentACK);
+					sendACK(currentACK);
 				}else{
 					currentACK = ACK0;
-					//sendACK(currentACK);
+					sendACK(currentACK);
 				}
-//			}
-				File file = new File("C:\\Users\\Melanie\\Desktop\\Packet.txt");
+			}
+				File file = new File(filepath);
 				try (FileOutputStream fos = new FileOutputStream("myfile.txt", true)) {
 					   fos.write(packet.getBytes());
 					   fos.close();
@@ -160,6 +160,16 @@ public class Receiver {
 				success = processCondition(getCondition(packet));
 			}
 		
+		
+	}
+	public void startTransmission(String filepath){
+		currentState = State.WAIT_0;
+		try {
+			receivePacket(filepath);
+		} catch (IOException e) {
+			System.out.println("Error while receiving data");
+		}
+		System.out.println("Finished transmission");
 		
 	}
 
