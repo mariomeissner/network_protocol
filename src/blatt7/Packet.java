@@ -5,23 +5,23 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.zip.Adler32;
 import javax.xml.bind.DatatypeConverter;
 
 public class Packet {
 
 	/* STRUCTURE:
-	 * HEADER | 2 X PAYLOAD LENGTH | 8 X CHECKSUM | PAYLOAD
+	 * 8 X CHECKSUM | HEADER | PAYLOAD
 	 */
 	private int seq;
 	private int ack;
-	private long checksum; //32 characters, 16 bytes
-	private int isAck;
+	private long checksum; 	//32 characters, 16 bytes
+	private int isAck;		// 0 false, 1 true
 	private byte[] payload;
 	private byte[] packetBytes;
-	//TODO: Add the payload length in the constructors
-	private short payloadLength;
-
+	private static final byte HEADERSIZE = 1 + 8;
 	/**
 	 * Construct a packet based on the indicated parameters
 	 * @param seq
@@ -40,21 +40,18 @@ public class Packet {
 
 		//Create the checksum over the pseudopacket (excluding the checksum field
 		Adler32 adler = new Adler32();
-		ByteBuffer checksumContent = ByteBuffer.allocate(payload.length + 2);
+		ByteBuffer checksumContent = ByteBuffer.allocate(payload.length + 1);
 		checksumContent.put(header);
-		checksumContent.putInt(payloadLength);
 		checksumContent.put(payload);
 		adler.update(checksumContent);
 		checksum = adler.getValue();
 
 		//Create the packet bytes
-		ByteBuffer buffer = ByteBuffer.allocate(payload.length + 11);
-		buffer.put(header);
-		buffer.putShort(payloadLength);
+		ByteBuffer buffer = ByteBuffer.allocate(payload.length + HEADERSIZE);
 		buffer.putLong(checksum);
+		buffer.put(header);
 		buffer.put(payload);
 		packetBytes = buffer.array();
-
 
 	}
 
@@ -63,19 +60,21 @@ public class Packet {
 	 * @param bytes
 	 */
 	public Packet(byte[] bytes) {
+		
+		//TODO: Do we really need this?
 		try {
 			String b = new String(bytes, "UTF-8");
 		} catch (UnsupportedEncodingException e) {e.printStackTrace();}
+		
 		seq = getBit(bytes, 0);
 		ack = getBit(bytes, 1);
 		isAck = getBit(bytes, 2);
 		Adler32 adler = new Adler32();
-		//Checksum starts at 3 and is 8 bytes long
-		adler.update(packetBytes, 3, 8);
+		adler.update(bytes, 8, bytes.length - 8);
 		checksum = adler.getValue();
-		byte[] payload = new byte[bytes.length - 11]; 
+		byte[] payload = new byte[bytes.length - HEADERSIZE]; 
 		for (int i = 0; i < payload.length; i++) {
-			payload[i] = bytes[i+11];
+			payload[i] = bytes[i+HEADERSIZE];
 		}
 
 	}
@@ -108,7 +107,7 @@ public class Packet {
 	}
 
 	public boolean isAck() {
-		if(this.getAck() == 0){
+		if(isAck == 0){
 			return false;
 		}else{
 			return true;
