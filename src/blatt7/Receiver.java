@@ -22,11 +22,11 @@ public class Receiver {
 
 	public static void main(String[] args) {
 		Receiver receiver = new Receiver();
-		receiver.startTransmission("./testreceive.txt");
+		receiver.startTransmission("./testreceive.jpg");
 		
 	}
 	
-	public static final String TARGET = "localhost";
+	public static final String TARGET = "138.246.2.10";
 	public static final int HOME_PORT = 5002;
 	public static final int TARGET_PORT = 5001;
 	private DatagramSocket socket;
@@ -37,7 +37,7 @@ public class Receiver {
 	private Packet packet = null;
 	private InetSocketAddress target_address; 
 	private long millis = 0; 
-	private long goodput = 0; 
+	private double goodput = 0; 
 
 
 	enum State {
@@ -194,7 +194,7 @@ public class Receiver {
 			System.out.println("Receiver: Error writing file");
 		}
 		millis = System.currentTimeMillis() - millis; 
-		goodput = (((long) packet.length())*8) / (millis/1000); //bit/ms
+		goodput = (((double) packet.length())*8) / (double)(millis/1000); //bit/ms
 		System.out.println("Receiver: Finished transmission");
 		System.out.println("Goodput: " + goodput + "bit/s");
 		
