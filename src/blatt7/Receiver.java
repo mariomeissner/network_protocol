@@ -153,7 +153,7 @@ public class Receiver {
 				}
 			}
 				File file = new File(filepath);
-				try (FileOutputStream fos = new FileOutputStream("myfile.txt", true)) {
+				try (FileOutputStream fos = new FileOutputStream(file, true)) {
 					   fos.write(packet.getBytes());
 					   fos.close();
 					}
