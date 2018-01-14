@@ -20,7 +20,7 @@ public class Sender {
 	
 	public static void main(String[] args) {
 		Sender sender = new Sender();
-		sender.startTransmission("./works.jpg");
+		sender.startTransmission("./java.jpg");
 	}
 	
 	public static final String TARGET = "217.255.167.49";
@@ -212,12 +212,11 @@ public class Sender {
 		}
 		
 		System.out.println("Sender: Finished transmisison");
-		
 	}
 	
 	private void socketSendCurrentPacket() throws IOException {
 		Packet candidate = unreliable(currentPacket);
-		if (candidate == null) return;
+		if (candidate == null) return; //lost paacket
 		DatagramPacket datagram = new DatagramPacket(candidate.getBytes(), candidate.length());
 		datagram.setSocketAddress(target_address);
 		socket.send(datagram);
