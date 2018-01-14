@@ -35,24 +35,26 @@ public class Packet {
 		this.ack = ack;
 		this.payload = payload;
 		this.isAck = isAck;
-
-		//Create the header
-		Byte header = (byte) (seq*4 + ack*2 + isAck); 
-
-		//Create the checksum over the pseudopacket (excluding the checksum field
+		packetBytes = new byte[payload.length + HEADERSIZE];
+		//Create the header bits
+		byte headerbits = (byte) (seq*4 + ack*2 + isAck); 
+		//Write header bits
+		packetBytes[8] = headerbits;
+		//Write payload
+		for (int i = 0; i < payload.length; i++ ) {
+			packetBytes[i + HEADERSIZE] = payload[i];
+		}
+		
+		//Create the checksum over the pseudopacket (excluding the checksum field)
 		Adler32 adler = new Adler32();
-		ByteBuffer checksumContent = ByteBuffer.allocate(payload.length + 1);
-		checksumContent.put(header);
-		checksumContent.put(payload);
-		adler.update(checksumContent);
+		adler.update(packetBytes, 8, packetBytes.length - 8);
 		checksum = adler.getValue();
-
-		//Create the packet bytes
-		ByteBuffer buffer = ByteBuffer.allocate(payload.length + HEADERSIZE);
-		buffer.putLong(checksum);
-		buffer.put(header);
-		buffer.put(payload);
-		packetBytes = buffer.array();
+		byte[] bchecksum = longToBytes(checksum);
+		for (int i = 0; i < 8; i++) {
+			packetBytes[i] = bchecksum[i];
+		}
+		//Write checksum
+		
 
 	}
 
