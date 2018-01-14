@@ -14,6 +14,7 @@ public class Packet {
 
 	/* STRUCTURE:
 	 * 8 X CHECKSUM | HEADER | PAYLOAD
+	 * HEADER: 0|0|0|0|0|SEQ|ACK|ISACK
 	 */
 	private int seq;
 	private int ack;
@@ -36,7 +37,8 @@ public class Packet {
 		this.isAck = isAck;
 
 		//Create the header
-		Byte header = Byte.parseByte(seq + ack + isAck + "00000", 2);
+		
+		Byte header = (byte) (seq*4 + ack*2 + isAck); 
 
 		//Create the checksum over the pseudopacket (excluding the checksum field
 		Adler32 adler = new Adler32();
@@ -66,9 +68,9 @@ public class Packet {
 			String b = new String(bytes, "UTF-8");
 		} catch (UnsupportedEncodingException e) {e.printStackTrace();}
 		
-		seq = getBit(bytes, 0);
-		ack = getBit(bytes, 1);
-		isAck = getBit(bytes, 2);
+		seq = getBit(bytes, 5);
+		ack = getBit(bytes, 6);
+		isAck = getBit(bytes, 7);
 		Adler32 adler = new Adler32();
 		adler.update(bytes, 8, bytes.length - 8);
 		checksum = adler.getValue();
