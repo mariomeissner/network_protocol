@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -17,13 +18,14 @@ import blatt7.Receiver.Transition;
 
 public class Sender {
 
-	public static final String IP = "localhost";
-	public static final int SENDERPORT = 5001; 
+	public static final String TARGET = "localhost";
+	public static final int HOME_PORT = 5001;
+	public static final int TARGET_PORT = 5002;
 	public static final int CHUNKSIZE =  100; //Kb
 	public static final int TIME_LIMIT = 2000;
 	public static final int MAXPACKETSIZE = 5000;
 	public static final int MAX_FILESIZE = 10000;
-	private InetAddress remoteIP;
+	private InetSocketAddress target_address;
 	private byte[] fileBytes;
 	private State currentState;
 	private Transition[][] transition;
@@ -42,10 +44,10 @@ public class Sender {
 
 	public Sender() {
 		try {
-			socket = new DatagramSocket(SENDERPORT);
+			socket = new DatagramSocket(HOME_PORT);
 			socket.setSoTimeout(TIME_LIMIT);
-			remoteIP = Inet4Address.getByName(IP);
-		} catch (SocketException | UnknownHostException e) {
+			target_address = new InetSocketAddress(TARGET, TARGET_PORT);
+		} catch (SocketException e) {
 			System.out.println("Connection error!");
 			return;
 		}
@@ -162,8 +164,8 @@ public class Sender {
 			byte[] buffer = new byte[MAXPACKETSIZE];
 			DatagramPacket datagram = new DatagramPacket(buffer, buffer.length); 
 			try { socket.receive(datagram); } catch (SocketTimeoutException e) {
-				//We do as if the packet was corrupt because we just want to send it again
-				processCondition(Condition.CORRUPT);
+				System.out.println("Sender: Timeout");
+				//Contents will be corrupt so we will resend
 			}
 			Packet packet = new Packet(datagram.getData());
 			success = processCondition(getCondition(packet));
@@ -205,7 +207,8 @@ public class Sender {
 	}
 	
 	private void socketSendCurrentPacket() throws IOException {
-		DatagramPacket datagram = new DatagramPacket(currentPacket.getBytes(), currentPacket.length(), remoteIP, SENDERPORT);
+		DatagramPacket datagram = new DatagramPacket(currentPacket.getBytes(), currentPacket.length());
+		datagram.setSocketAddress(target_address);
 		socket.send(datagram);
 	}
 	

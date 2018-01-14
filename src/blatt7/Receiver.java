@@ -9,6 +9,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -19,15 +20,17 @@ import java.io.IOException;
 
 public class Receiver {
 
-	public static final String IP = "localhost";
-	public static final int RECEIVERPORT = 5002;
+	public static final String TARGET = "localhost";
+	public static final int HOME_PORT = 5002;
+	public static final int TARGET_PORT = 5001;
 	private DatagramSocket socket;
 	private ByteBuffer fileBytes;
 	private State currentState; 
 	private Transition[][] transition;
 	private InetAddress remoteIP;
 
-	private Packet packet = null; 
+	private Packet packet = null;
+	private InetSocketAddress target_address; 
 
 
 	enum State {
@@ -40,10 +43,10 @@ public class Receiver {
 
 	public Receiver()  {
 		try {
-			socket = new DatagramSocket(RECEIVERPORT);
+			socket = new DatagramSocket(HOME_PORT);
 			socket.setSoTimeout(Sender.TIME_LIMIT);
-			remoteIP = Inet4Address.getByName(IP);
-		} catch (SocketException | UnknownHostException e) {
+			target_address = new InetSocketAddress(TARGET, TARGET_PORT);
+		} catch (SocketException e) {
 			System.out.println("Connection error!");
 		}
 		fileBytes = ByteBuffer.allocate(Sender.MAX_FILESIZE);
@@ -136,7 +139,9 @@ public class Receiver {
 
 		byte[] dummypayload = {0};
 		Packet ack = new Packet(i, i, dummypayload, 1, 0);
-		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length(), remoteIP, Sender.SENDERPORT);
+		DatagramPacket p = new DatagramPacket(ack.getBytes(), ack.length());
+		p.setSocketAddress(target_address);
+		
 		socket.send(p);
 	}
 
@@ -148,7 +153,8 @@ public class Receiver {
 			try {
 				socket.receive(p);
 			} catch (SocketTimeoutException e) {
-				processCondition(Condition.CORRUPT);
+				System.out.println("Receiver: Timeout");
+				//Contents will be corrupt so we will resend
 			}
 			packet = new Packet(p.getData());
 			success = processCondition(getCondition(packet));
