@@ -37,6 +37,7 @@ public class Receiver {
 	private Packet packet = null;
 	private InetSocketAddress target_address; 
 	private long millis = 0; 
+	private long goodput = 0; 
 
 
 	enum State {
@@ -193,8 +194,10 @@ public class Receiver {
 			System.out.println("Receiver: Error writing file");
 		}
 		millis = System.currentTimeMillis() - millis; 
+		goodput = (((long) packet.length())*8) / (millis/1000); //bit/ms
 		System.out.println("Receiver: Finished transmission");
-		System.out.println("Duration: " + millis + "Milliseconds");
+		System.out.println("Goodput: " + goodput + "bit/s");
+		
 
 	}
 
