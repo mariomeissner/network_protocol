@@ -37,7 +37,6 @@ public class Packet {
 		this.isAck = isAck;
 
 		//Create the header
-		
 		Byte header = (byte) (seq*4 + ack*2 + isAck); 
 
 		//Create the checksum over the pseudopacket (excluding the checksum field
@@ -63,27 +62,31 @@ public class Packet {
 	 */
 	public Packet(byte[] bytes) {
 		
-		//TODO: Do we really need this?
-		try {
-			String b = new String(bytes, "UTF-8");
-		} catch (UnsupportedEncodingException e) {e.printStackTrace();}
+		//Assign the bytes
+		packetBytes = bytes;
 		
-		seq = getBit(bytes, 5);
-		ack = getBit(bytes, 6);
-		isAck = getBit(bytes, 7);
-		Adler32 adler = new Adler32();
-		adler.update(bytes, 8, bytes.length - 8);
-		checksum = adler.getValue();
+		//Get the parameters
+		seq = getBit(bytes, 5 + 8*8);
+		ack = getBit(bytes, 6 + 8*8);
+		isAck = getBit(bytes, 7 + 8*8);
+		byte[] bchecksum = new byte[8];
+		for (int i = 0; i < 8; i ++) {
+			bchecksum[i] = bytes[i];
+		}
+		checksum = bytesToLong(bchecksum);
 		byte[] payload = new byte[bytes.length - HEADERSIZE]; 
 		for (int i = 0; i < payload.length; i++) {
 			payload[i] = bytes[i+HEADERSIZE];
 		}
-
 	}
 
 
 	public byte[] getBytes(){
 		return packetBytes;
+	}
+	
+	public byte[] getPayload() {
+		return payload;
 	}
 
 	/**
@@ -104,7 +107,7 @@ public class Packet {
 
 	public boolean checkChecksum() {
 		Adler32 adler = new Adler32();
-		adler.update(packetBytes);
+		adler.update(packetBytes, 8, packetBytes.length - 8);
 		return adler.getValue() == checksum;
 	}
 
@@ -129,7 +132,6 @@ public class Packet {
 		int valInt = valByte>>(8-(posBit+1)) & 0x0001;
 		return valInt;
 	}
-
 
 
 
