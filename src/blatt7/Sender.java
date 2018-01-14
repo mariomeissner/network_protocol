@@ -30,6 +30,10 @@ public class Sender {
 	public static final int TIME_LIMIT = 2000;
 	public static final int MAXPACKETSIZE = 5000;
 	public static final int MAX_FILESIZE = 50000;
+	public static final double CHANCE_LOST = 0.05;
+	public static final double CHANCE_DUPLICATE = 0.05;
+	public static final double CHANCE_MODIFIED = 0.05;
+	
 	private InetSocketAddress target_address;
 	private byte[] fileBytes;
 	private State currentState;
@@ -38,7 +42,7 @@ public class Sender {
 	private int bytesPos = 0;
 	private int numChunks;
 	private Packet currentPacket;
-	
+	private Packet oldPacket; //For unreliable
 	enum State {
 		WAIT_SEND_0, WAIT_ACK_0, WAIT_SEND_1, WAIT_ACK_1;
 	};
@@ -212,7 +216,9 @@ public class Sender {
 	}
 	
 	private void socketSendCurrentPacket() throws IOException {
-		DatagramPacket datagram = new DatagramPacket(currentPacket.getBytes(), currentPacket.length());
+		Packet candidate = unreliable(currentPacket);
+		if (candidate == null) return;
+		DatagramPacket datagram = new DatagramPacket(candidate.getBytes(), candidate.length());
 		datagram.setSocketAddress(target_address);
 		socket.send(datagram);
 	}
@@ -244,5 +250,25 @@ public class Sender {
 		}
 		bytesPos += CHUNKSIZE;
 		return chunk;
+	}
+	
+	private Packet unreliable(Packet packet) {
+		double rand = Math.random();
+		if (rand < CHANCE_DUPLICATE) {
+			return oldPacket;
+		} 
+		rand = Math.random();
+		if (rand < CHANCE_LOST) {
+			return null;
+		}
+		rand = Math.random();
+		if (rand < CHANCE_MODIFIED) {
+			byte[] data = packet.getBytes();
+			//Overwrite something random in the first 20 bytes
+			data[(int) rand * 20] = 0;
+			return new Packet(data, data.length);
+		} 
+		oldPacket = currentPacket;
+		return packet;
 	}
 }
