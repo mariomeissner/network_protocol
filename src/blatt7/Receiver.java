@@ -164,19 +164,6 @@ public class Receiver {
 			packet = new Packet(p.getData(), p.getLength());
 			success = processCondition(getCondition(packet));
 			
-			/* we dont need this
-			if (packet.getSeq() == currentACK) {
-				sendACK(currentACK); 
-			} else {
-				if (currentACK == ACK0){
-					currentACK = ACK1;
-					sendACK(currentACK);
-				}else{
-					currentACK = ACK0;
-					sendACK(currentACK);
-				}
-			}
-			*/
 		}
 		byte[] payload = packet.getPayload();
 		for(int i = 0; i < payload.length; i++) {
